@@ -1,19 +1,32 @@
 # Tally, verified counting in Lean 4
 
-Tally computes terms of integer sequences from the OEIS as theorems of Lean 4.
-It consists of a generic layered dynamic-programming engine, proved correct
-once, and one specification per OEIS family, each with a proof that the
-words the specification accepts correspond to the objects the OEIS entry
-counts. A term `A(n) = N` is then a Lean theorem whose proof runs the compiled
-engine inside the proof checker.
+[![CI](https://github.com/leansolving/tally-lean/actions/workflows/ci.yml/badge.svg)](https://github.com/leansolving/tally-lean/actions/workflows/ci.yml)
+[![Lean](https://img.shields.io/badge/Lean-v4.30.0-blue)](https://github.com/leanprover/lean4/releases/tag/v4.30.0)
+[![Mathlib](https://img.shields.io/badge/Mathlib-v4.30.0-blue)](https://github.com/leanprover-community/mathlib4/releases/tag/v4.30.0)
 
-The engine is the usual frontier (transfer-matrix) method: a forward pass over
-the cells of a board that keeps one hash map from frontier states to counts per
-layer and merges equal states by adding their counts.
+Tally computes terms of integer sequences from the [OEIS](https://oeis.org)
+as theorems of Lean 4. The engine counts discrete objects in general; the OEIS
+is its intended use. It consists of a generic layered dynamic-programming
+engine, proved correct once, and one specification per family of related OEIS
+sequences, each with a proof that the words the specification accepts
+correspond to the objects the OEIS entry counts. A specification is a root
+state and a step function that, for each layer and symbol, rejects or returns
+the next state, plus an acceptance test on the final state; a word has one
+symbol per layer, and for the grid sequences a layer is one cell of the grid.
+A term `A(n) = N` is then a Lean theorem proved with `native_decide`: the
+compiled engine computes the count, and the kernel accepts the result through
+an axiom recorded for that theorem (see Trust base).
+
+The engine implements the transfer-matrix method of enumerative combinatorics.
+It processes the cells one at a time; after each cell, a state records only
+what the remaining cells need to know about the cells already filled (for
+independent sets, which cells of the current row boundary are occupied). One
+hash map per layer maps each state to the number of partial words that reach
+it, and partial words with the same state are merged by adding their counts.
 
 ## Trust base
 
-Every claimed value rests on three statements, each with its own trust base.
+Every claimed value rests on the following three theorems.
 
 1. The engine theorem `Tally.Spec.count_eq` (`Tally/Engine.lean`): for every
    layered specification, the engine returns the number of accepted words.
@@ -32,7 +45,8 @@ Every claimed value rests on three statements, each with its own trust base.
 `#print axioms` is run on every main theorem, with a positive control
 (`Tally/Examples.lean`, a `native_decide` theorem whose axiom must show up).
 The library contains no `sorry`, `implemented_by`, `extern`, `partial` or
-`unsafe`.
+`unsafe`. The script `scripts/audit.sh` performs both checks; CI runs it after
+every build.
 
 Every new term is additionally cross-checked by an independent, unverified
 Rust counter of a different formulation (`twins/`) before it is reported.
@@ -43,8 +57,8 @@ Reproduced OEIS terms (value theorems agreeing with the b-files):
 
 | Sequence | Objects | Reproduced |
 |---|---|---|
-| A006506 | independent sets of the n × n grid | n ≤ 22 (laptop), n = 30, 32, 34 (cluster) |
-| A066864 | independent sets of the n × n rhombus of the triangular lattice (grid plus one diagonal) | n ≤ 12 (laptop) |
+| A006506 | independent sets of the n × n grid | n ≤ 22, n = 30, 32, 34 |
+| A066864 | independent sets of the n × n rhombus of the triangular lattice (grid plus one diagonal) | n ≤ 12 |
 | A145789 | n × n binary arrays whose ones form 1 × 4 or 4 × 1 bars, no two edge-adjacent (diagonal contact allowed) | n ≤ 16 |
 | A145757 | the same with 1 × 3 bars | n ≤ 13 |
 | A145773 | the same with 1 × 2 bars | n ≤ 16 |
@@ -84,10 +98,10 @@ therefore not imported by `TallyValues.lean`; build one with
 - `Tally/Grid.lean`, `Tally/Bits.lean`: shared lemmas for grid words and for
   `UInt64` bit fields.
 - `Tally/Families/GridIndep*.lean`: A006506 and A066864 (one family with a
-  Boolean parameter: grid graph, or grid plus anti-diagonal).
-  `Tally/Families/BarArray*.lean`: A145789, A145757, A145773.
+  Boolean parameter that selects the grid graph or the grid plus anti-diagonal).
+- `Tally/Families/BarArray*.lean`: A145789, A145757, A145773.
 - `Tally/Examples.lean`: toy specifications and the axiom audit.
-- `TallyValues/`: value theorems (separate library, see below).
+- `TallyValues/`: value theorems (separate library, see Results and Building).
 - `Main.lean`: `lake exe tally-lean`, an unverified command-line runner of the
   verified engine, for timings and cross-checks.
 - `twins/gridis`, `twins/bars`: the independent Rust counters.
@@ -107,13 +121,16 @@ lake exe tally-lean bar 3 12    # A145757(12)
 ```
 
 A parallel variant of the engine, `Spec.countPar` (`Tally/Engine.lean`, section
-"Parallel engine"), splits every layer into `P` shards processed by `P` tasks; its
-theorem `Spec.countPar_eq` is proved with the same invariant, and `Task.spawn` /
-`Task.get` are pure functions whose reference implementation the kernel sees, so
-value theorems through `checkCountPar` have the same trust base as through
-`checkCount`. Sharding also keeps every hash map below 2^27 buckets, which the
-Linux Lean runtime needs (larger bucket arrays are not freed; see the
-development notes). `lake exe tally-lean par 8 hex 30` runs it with 8 shards.
+"Parallel engine"), splits the states of every layer into `P` disjoint parts and
+processes them in `P` parallel tasks. Its theorem `Spec.countPar_eq` is proved
+with the same invariant as `Spec.count_eq`. `Task.spawn` and `Task.get` have
+ordinary definitions in the Lean core library (`Task.spawn f` is `⟨f ()⟩`,
+`Task.get` is the field projection) and the proofs unfold them, so value
+theorems through `checkCountPar` have the same trust base as through
+`checkCount`. Splitting the layer also keeps every hash map below 2^27 buckets;
+on Linux the Lean runtime does not free larger bucket arrays, so a sequential
+run beyond about 1e8 states per layer grows until it fails.
+`lake exe tally-lean par 8 hex 30` runs the parallel engine with 8 parts.
 
 `Tally` is built with `precompileModules`, so that `native_decide` in the
 value theorems runs the compiled engine rather than the IR interpreter. Each
@@ -126,10 +143,11 @@ The Rust twins need `cargo` and GMP (through the `rug` crate):
 ## Development
 
 The code and proofs were developed with AI assistance (Claude Code with Opus and
-Fable models), with the Lean checker as the arbiter: the trust base stated above
-is the trust base, independent of how a proof was found. The edit loop used
-[LeanBack](https://pypi.org/project/leanback/), an MCP server for Lean 4
-(check, prove, goals, eval, search) by the author.
+Fable models). The Lean kernel checks every proof, so the trust base stated
+above does not depend on how a proof was found. During development, each edit
+was checked with [LeanBack](https://pypi.org/project/leanback/), the author's
+Model Context Protocol (MCP) server through which an AI assistant calls Lean 4
+(check, prove, goals, eval, search).
 
 ## Author
 

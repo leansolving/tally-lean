@@ -1,0 +1,26 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the library, the runner and the small value theorems
+        uses: leanprover/lean-action@v1
+        with:
+          build-args: "Tally tally-lean TallyValues"
+          test: "false"
+          lint: "false"
+      - name: Axiom audit and keyword check
+        run: bash scripts/audit.sh
+      - name: Runner smoke test
+        run: |
+          ./.lake/build/bin/tally-lean 8 | grep -q "count=660647962955"
+          ./.lake/build/bin/tally-lean hex 8 | grep -q "count=11435477118"
+          ./.lake/build/bin/tally-lean bar 3 8 | grep -q "count=8764691"
+          ./.lake/build/bin/tally-lean par 4 hex 10 | grep -q "count=2902264461628298"
