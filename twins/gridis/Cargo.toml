@@ -1,0 +1,19 @@
+[package]
+name = "gridis"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default = ["gmp"]
+gmp = ["dep:rug"]
+bigint = ["dep:num-bigint"]
+
+[dependencies]
+rustc-hash = "2"
+rug = { version = "1", default-features = false, features = ["integer"], optional = true }
+num-bigint = { version = "0.4", optional = true }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
