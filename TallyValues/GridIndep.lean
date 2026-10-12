@@ -1,4 +1,4 @@
-import Tally.Families.GridIndepFast
+import Tally.Families.GridIndepMain
 
 /-!
 # Values of A006506 reproduced by the engine

@@ -1,4 +1,4 @@
-import Tally.Families.GridIndepFast
+import Tally.Families.GridIndepMain
 
 /-! Scaling test: A006506 34 (b-file value) through the compiled checker.
 Trust base of this value theorem: Lean kernel plus the Lean compiler, runtime and GMP

@@ -4,7 +4,9 @@ import Tally.Examples
 import Tally.Grid
 import Tally.Bits
 import Tally.Families.GridIndep
+import Tally.Families.GridIndepAccept
 import Tally.Families.GridIndepFast
+import Tally.Families.GridIndepMain
 import Tally.Families.BarArray
 import Tally.Families.BarArrayLocal
 import Tally.Families.BarArrayFront

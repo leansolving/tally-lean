@@ -59,4 +59,16 @@ theorem count_eq_of_check {n k expected : Nat} (h : checkCount n k expected = tr
     (fspec n k).count = expected :=
   of_decide_eq_true h
 
+
+/-- Compiled check through the parallel engine (`Spec.countPar` with `P` shards, hash
+partition; same trust base as `checkCount`). -/
+@[noinline] def checkCountPar (n k : Nat) (P : Nat) (expected : Nat) : Bool :=
+  decide (Spec.countPar (mkSpec n k) (fun _ => hashPart) P = expected)
+
+theorem count_eq_of_checkPar {n k : Nat} {P expected : Nat}
+    (h : checkCountPar n k P expected = true) : (fspec n k).count = expected := by
+  rw [Spec.count_eq]
+  have e := Spec.countPar_eq (mkSpec n k) (fun _ => hashPart) P (fun _ => rfl)
+  exact e ▸ of_decide_eq_true h
+
 end Tally.BarArray

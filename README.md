@@ -44,6 +44,7 @@ Reproduced OEIS terms (value theorems agreeing with the b-files):
 | Sequence | Objects | Reproduced |
 |---|---|---|
 | A006506 | independent sets of the n × n grid | n ≤ 22 (laptop), n = 30, 32, 34 (cluster) |
+| A066864 | independent sets of the n × n rhombus of the triangular lattice (grid plus one diagonal) | n ≤ 12 (laptop) |
 | A145789 | n × n binary arrays whose ones form 1 × 4 or 4 × 1 bars, no two edge-adjacent (diagonal contact allowed) | n ≤ 16 |
 | A145757 | the same with 1 × 3 bars | n ≤ 13 |
 | A145773 | the same with 1 × 2 bars | n ≤ 16 |
@@ -82,8 +83,9 @@ therefore not imported by `TallyValues.lean`; build one with
   `Spec.count_eq`, plus `count_eq_of_sim`.
 - `Tally/Grid.lean`, `Tally/Bits.lean`: shared lemmas for grid words and for
   `UInt64` bit fields.
-- `Tally/Families/GridIndep*.lean`: A006506. `Tally/Families/BarArray*.lean`:
-  A145789, A145757, A145773.
+- `Tally/Families/GridIndep*.lean`: A006506 and A066864 (one family with a
+  Boolean parameter: grid graph, or grid plus anti-diagonal).
+  `Tally/Families/BarArray*.lean`: A145789, A145757, A145773.
 - `Tally/Examples.lean`: toy specifications and the axiom audit.
 - `TallyValues/`: value theorems (separate library, see below).
 - `Main.lean`: `lake exe tally-lean`, an unverified command-line runner of the
@@ -100,8 +102,18 @@ lake exe cache get      # Mathlib build cache
 lake build              # library Tally, kernel-checked part
 lake build TallyValues  # value theorems for small n (minutes)
 lake exe tally-lean 20          # A006506(20), unverified runner
+lake exe tally-lean hex 20      # A066864(20)
 lake exe tally-lean bar 3 12    # A145757(12)
 ```
+
+A parallel variant of the engine, `Spec.countPar` (`Tally/Engine.lean`, section
+"Parallel engine"), splits every layer into `P` shards processed by `P` tasks; its
+theorem `Spec.countPar_eq` is proved with the same invariant, and `Task.spawn` /
+`Task.get` are pure functions whose reference implementation the kernel sees, so
+value theorems through `checkCountPar` have the same trust base as through
+`checkCount`. Sharding also keeps every hash map below 2^27 buckets, which the
+Linux Lean runtime needs (larger bucket arrays are not freed; see the
+development notes). `lake exe tally-lean par 8 hex 30` runs it with 8 shards.
 
 `Tally` is built with `precompileModules`, so that `native_decide` in the
 value theorems runs the compiled engine rather than the IR interpreter. Each

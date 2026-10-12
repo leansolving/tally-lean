@@ -306,4 +306,7 @@ def leftReg (g : Nat → Nat → Bool) (R C : Nat) : Left :=
 def front (g : Nat → Nat → Bool) (i : Nat) : MState n :=
   (fun j => colEntry k g (i / n) (i % n) j.val, leftReg k g (i / n) (i % n))
 
+/-- Fresh spec object per worker of the parallel engine (see `Spec.advancePar`). -/
+@[noinline] def mkSpec (n k : Nat) (_j : Nat) : Spec UInt64 (n * n) 2 := fspec n k
+
 end Tally.BarArray

@@ -129,4 +129,12 @@ theorem toUInt64_toNat_small (x : Nat) (hx : x < 8) : x.toUInt64.toNat = x := by
 theorem ne_of_toNat_ne {x y : UInt64} (h : x.toNat ≠ y.toNat) : x ≠ y :=
   fun e => h (congrArg UInt64.toNat e)
 
+/-! ### Single bit shifted left (the anti-diagonal neighbour) -/
+
+theorem bitl_getLsbD (c : Nat) (hc : c + 1 < 64) (j : Nat) (hj : j < 64) :
+    (((1 : UInt64) <<< c.toUInt64) <<< 1).toBitVec.getLsbD j = decide (j = c + 1) := by
+  simp [UInt64.toBitVec_shiftLeft, BitVec.getLsbD_shiftLeft,
+    Nat.mod_eq_of_lt (show c < 64 by omega)]
+  by_cases h1 : j < 1 <;> by_cases h2 : j = c + 1 <;> simp_all <;> omega
+
 end Tally.Bits
