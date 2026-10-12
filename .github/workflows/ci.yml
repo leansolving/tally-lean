@@ -10,12 +10,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build the library, the runner and the small value theorems
+      - name: Install the toolchain and the Mathlib cache
         uses: leanprover/lean-action@v1
         with:
-          build-args: "Tally tally-lean TallyValues"
+          build: "false"
           test: "false"
           lint: "false"
+      - name: Build the library, the runner and the small value theorems
+        # precompiled modules are loaded as shared libraries, which needs the
+        # toolchain's lib/lean on the loader path (Linux)
+        run: |
+          echo "LD_LIBRARY_PATH=$(lean --print-libdir)" >> "$GITHUB_ENV"
+          export LD_LIBRARY_PATH="$(lean --print-libdir)"
+          lake build Tally tally-lean TallyValues
       - name: Axiom audit and keyword check
         run: bash scripts/audit.sh
       - name: Runner smoke test
