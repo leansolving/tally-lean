@@ -1,0 +1,21 @@
+cff-version: 1.2.0
+message: "If you use Tally, please cite it as below."
+type: software
+title: "Tally, verified counting in Lean 4"
+abstract: "A layered dynamic-programming counting engine written and proved correct in Lean 4, with per-family theorems that relate the accepted words of a specification to the objects an OEIS entry counts. Terms of OEIS sequences are obtained as Lean theorems of the form A(n) = N."
+authors:
+  - family-names: Szeider
+    given-names: Stefan
+    orcid: "https://orcid.org/0000-0001-8994-1656"
+    affiliation: "TU Wien"
+license: Apache-2.0
+repository-code: "https://github.com/leansolving/tally-lean"
+version: 0.1.0
+date-released: 2026-10-13
+keywords:
+  - Lean 4
+  - formal verification
+  - enumerative combinatorics
+  - OEIS
+  - transfer-matrix method
+  - dynamic programming
